@@ -49,7 +49,7 @@ Client → Control Plane → Message Queue → Inference Engine → Model Regist
 
 ## Development Environment Setup
 
-This project uses VS Code and GitHub Copilot for AI-powered development. Follow these steps to automate your local setup:
+This project uses VS Code and GitHub Copilot for AI-powered development. All environment setup is automated, including Git and GitHub integration.
 
 ## Automated Setup
 
@@ -67,10 +67,13 @@ This project uses VS Code and GitHub Copilot for AI-powered development. Follow 
 - Installs Copilot and Copilot Chat extensions for VS Code
 - (Optional) Installs Python extension if uncommented
 - Applies workspace settings for Copilot best practices
+- Initializes a git repository and configures your user info
+- Creates a new GitHub repository and pushes the initial commit
 
 ## Manual Steps (if needed)
 - Ensure you are using PowerShell 7+
 - Check `.vscode/settings.json` for Copilot configuration
+- If you want to use a different GitHub repo, update the script accordingly
 
 ## Troubleshooting
 - If extension install fails, update VS Code and retry
