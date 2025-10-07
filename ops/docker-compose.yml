@@ -17,4 +17,31 @@ services:
 
 networks:
   miaas-network:
+    build:
+      context: ../control-plane
+      dockerfile: Dockerfile
+    container_name: miaas-control-plane
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    networks:
+      - miaas
+
+  ui:
+    build:
+      context: ../ui
+      dockerfile: Dockerfile
+    container_name: miaas-ui
+    ports:
+      - "3000:80"
+    depends_on:
+      - control-plane
+    restart: unless-stopped
+    networks:
+      - miaas
+
+networks:
+  miaas:
     driver: bridge
