@@ -1,47 +1,117 @@
 # MIaaS - Model Infrastructure as a Service
 
-MIaaS is an open platform for orchestrating AI/ML infrastructure across distributed nodes.
+An open platform for orchestrating AI/ML infrastructure across distributed nodes.
 
-## 🚀 Quick Start
+## Overview
 
-The MVP is ready to run! See [QUICKSTART.md](QUICKSTART.md) to run the control plane and agent in minutes.
+MIaaS provides a control plane and agent system for managing distributed infrastructure nodes, with a focus on GPU-enabled systems for AI/ML workloads. This MVP implements the core node registration and management UI.
 
-## About This Project
+## Architecture
 
-This project uses VS Code and GitHub Copilot for AI-powered development. All environment setup is automated, including Git and GitHub integration.
+- **Control Plane**: FastAPI backend that manages node registration and provides REST APIs
+- **UI**: React-based web interface for viewing and managing nodes
+- **Agent**: (Coming soon) Node agent for capability reporting and task execution
 
-## Automated Setup
+## Quick Start
 
-1. Open PowerShell in this directory.
-2. Run the setup script:
-   ```powershell
-   ./setup.ps1
-   ```
-3. Open the project in VS Code:
-   ```powershell
-   code .
-   ```
+### Using Docker Compose (Recommended)
 
-## What the Script Does
-- Installs Copilot and Copilot Chat extensions for VS Code
-- (Optional) Installs Python extension if uncommented
-- Applies workspace settings for Copilot best practices
-- Initializes a git repository and configures your user info
-- Creates a new GitHub repository and pushes the initial commit
+```bash
+cd ops
+docker-compose up --build
+```
 
-## Manual Steps (if needed)
-- Ensure you are using PowerShell 7+
-- Check `.vscode/settings.json` for Copilot configuration
-- If you want to use a different GitHub repo, update the script accordingly
+Then open:
+- UI: http://localhost:3000
+- API: http://localhost:8000
 
-## Troubleshooting
-- If extension install fails, update VS Code and retry
-- For more help, see the official Copilot docs
-- If GitHub repo creation fails, check your authentication with `gh auth status`
+### Local Development
 
-## Project Documentation
+#### Control Plane
+```bash
+cd control-plane
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-- [QUICKSTART.md](QUICKSTART.md) - Run the MVP in minutes
-- [MIaaS.md](MIaaS.md) - Full architecture and roadmap
-- [Agent README](agent/README.md) - Agent documentation
-- [Control Plane README](control-plane/README.md) - Control plane documentation
+# In another terminal, seed test data
+./seed_data.sh
+```
+
+#### UI
+```bash
+cd ui
+npm install
+npm run dev
+```
+
+Then open http://localhost:5173
+
+## Features
+
+✅ **Node Registration API** - Nodes can register with the control plane
+✅ **Node List Display** - UI shows all registered nodes with capabilities
+✅ **Real-time Refresh** - Manually refresh node list
+✅ **Responsive Design** - Modern card-based layout with dark theme
+
+## Project Structure
+
+```
+MIaaS/
+├── control-plane/       # FastAPI backend
+│   ├── app/
+│   │   └── main.py     # API endpoints
+│   ├── Dockerfile
+│   └── requirements.txt
+├── ui/                  # React frontend
+│   ├── src/
+│   │   ├── components/ # React components
+│   │   ├── App.jsx     # Main app
+│   │   └── main.jsx
+│   ├── Dockerfile
+│   └── nginx.conf
+├── ops/                 # Deployment configs
+│   └── docker-compose.yml
+└── docs/               # Documentation
+
+```
+
+## API Endpoints
+
+### `POST /api/v1/nodes/register`
+Register a new node with capabilities.
+
+### `GET /api/v1/nodes`
+List all registered nodes.
+
+See [control-plane/README.md](control-plane/README.md) for full API documentation.
+
+## Screenshots
+
+![MIaaS UI](https://github.com/user-attachments/assets/c6e2a552-64b5-488f-905d-4dee208a63e2)
+
+## Roadmap
+
+- [x] Control plane API (node registration, listing)
+- [x] UI skeleton with node display
+- [ ] Node agent implementation
+- [ ] Template system for deployments
+- [ ] Authentication and authorization
+- [ ] Real-time node status updates
+- [ ] Component catalog (Postgres, Redis, LLMs, etc.)
+
+## Development Environment Setup
+
+This project uses VS Code and GitHub Copilot for AI-powered development.
+
+### Automated Setup
+1. Open PowerShell in this directory
+2. Run `./setup.ps1`
+3. Open project in VS Code: `code .`
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## License
+
+See [LICENSE](LICENSE) for details.
