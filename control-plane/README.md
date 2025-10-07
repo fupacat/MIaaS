@@ -1,105 +1,131 @@
-# MIaaS Control Plane
+# Control Plane
 
-FastAPI-based control plane for managing nodes in the MIaaS cluster.
+The Control Plane is the central component of MIaaS that manages node registration and orchestration.
 
 ## Features
 
-- Node registration API
-- Node listing with capabilities
-- CORS-enabled for UI integration
-- In-memory storage (MVP)
+- Node registration via REST API
+- Node listing and retrieval
+- In-memory storage for nodes
+- Health check endpoint
 
 ## API Endpoints
 
-### GET `/`
-Health check endpoint
+### Register Node
+```
+POST /api/v1/nodes/register
+```
+
+Register a new node or update an existing one.
+
+**Request body:**
 ```json
 {
-  "message": "MIaaS Control Plane API",
-  "version": "0.1.0"
+  "id": "node-123",
+  "hostname": "worker-01",
+  "capabilities": ["docker", "compose"],
+  "status": "active"
 }
 ```
 
-### POST `/api/v1/nodes/register`
-Register a new node with the control plane.
-
-**Request:**
+**Response (201):**
 ```json
 {
-  "name": "node-1",
-  "ip": "192.168.1.100",
-  "capabilities": {
-    "cpu": "8 cores",
-    "memory": "16GB",
-    "gpu": "NVIDIA RTX 3090",
-    "docker": true
+  "message": "Node registered successfully",
+  "node": {
+    "id": "node-123",
+    "hostname": "worker-01",
+    "capabilities": ["docker", "compose"],
+    "status": "active",
+    "last_heartbeat": "2025-10-07T12:00:00"
   }
 }
 ```
 
-**Response:**
-```json
-{
-  "node_id": "uuid",
-  "node_token": "node-token-uuid"
-}
+### List Nodes
+```
+GET /api/v1/nodes
 ```
 
-### GET `/api/v1/nodes`
 List all registered nodes.
 
-**Response:**
+**Response (200):**
 ```json
-[
-  {
-    "id": "uuid",
-    "name": "node-1",
-    "ip": "192.168.1.100",
-    "capabilities": { ... },
-    "last_seen": 1234567890.123,
-    "status": "online"
-  }
-]
+{
+  "nodes": [
+    {
+      "id": "node-123",
+      "hostname": "worker-01",
+      "capabilities": ["docker", "compose"],
+      "status": "active",
+      "last_heartbeat": "2025-10-07T12:00:00"
+    }
+  ],
+  "count": 1
+}
 ```
 
-## Development
+### Get Node
+```
+GET /api/v1/nodes/{node_id}
+```
 
-### Run locally
+Get details of a specific node.
+
+**Response (200):**
+```json
+{
+  "id": "node-123",
+  "hostname": "worker-01",
+  "capabilities": ["docker", "compose"],
+  "status": "active",
+  "last_heartbeat": "2025-10-07T12:00:00"
+}
+```
+
+### Health Check
+```
+GET /health
+```
+
+Check if the service is healthy.
+
+**Response (200):**
+```json
+{
+  "status": "healthy"
+}
+```
+
+## Installation
+
 ```bash
+cd control-plane
 pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Seed test data
+## Running
+
 ```bash
-./seed_data.sh
+cd control-plane
+python -m app.api
 ```
 
-### Build Docker image
-```bash
-docker build -t miaas-control-plane .
-```
-
-### Run with Docker
-```bash
-docker run -p 8000:8000 miaas-control-plane
-```
+The server will start on `http://0.0.0.0:5000`.
 
 ## Testing
 
 ```bash
-# Check API health
-curl http://localhost:8000/
-
-# List nodes
-curl http://localhost:8000/api/v1/nodes
-
-# Register a node
-curl -X POST http://localhost:8000/api/v1/nodes/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "test-node",
-    "ip": "192.168.1.100",
-    "capabilities": {"cpu": "8 cores", "docker": true}
-  }'
+cd control-plane
+pytest
 ```
+
+## Node Model
+
+A node in the system has the following attributes:
+
+- `id` (string, required): Unique identifier for the node
+- `hostname` (string, required): Hostname of the node
+- `capabilities` (list, optional): List of capabilities the node supports (e.g., ["docker", "compose"])
+- `status` (string, optional): Current status of the node (default: "active")
+- `last_heartbeat` (datetime, auto-generated): Timestamp of the last heartbeat received
