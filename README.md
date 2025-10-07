@@ -1,117 +1,127 @@
-# MIaaS - Model Infrastructure as a Service
+# MIaaS - Model Inference as a Service
 
-An open platform for orchestrating AI/ML infrastructure across distributed nodes.
+MIaaS is a scalable microservices platform for deploying and managing machine learning model inference workloads. It provides a unified API for submitting inference requests across multiple ML frameworks.
 
-## Overview
+## Architecture Overview
 
-MIaaS provides a control plane and agent system for managing distributed infrastructure nodes, with a focus on GPU-enabled systems for AI/ML workloads. This MVP implements the core node registration and management UI.
+MIaaS follows a microservices architecture with three core components:
 
-## Architecture
+### Core Services
 
-- **Control Plane**: FastAPI backend that manages node registration and provides REST APIs
-- **UI**: React-based web interface for viewing and managing nodes
-- **Agent**: (Coming soon) Node agent for capability reporting and task execution
+1. **Control Plane** (`services/control-plane/`)
+   - Central orchestrator for all inference requests
+   - Validates requests and manages service lifecycle
+   - Handles authentication and rate limiting
+   - Exposes REST API on port 8080
 
-## Quick Start
+2. **Inference Engine** (`services/inference-engine/`)
+   - Executes model inference workloads
+   - Supports multiple ML frameworks (TensorFlow, PyTorch, ONNX)
+   - Scales horizontally based on demand
+   - Pulls models from Model Registry
 
-### Using Docker Compose (Recommended)
+3. **Model Registry** (`services/model-registry/`)
+   - Centralized model storage and versioning
+   - Manages model metadata and schemas
+   - Provides model discovery and retrieval APIs
+   - Tracks model lifecycle (active, deprecated, archived)
 
-```bash
-cd ops
-docker-compose up --build
-```
-
-Then open:
-- UI: http://localhost:3000
-- API: http://localhost:8000
-
-### Local Development
-
-#### Control Plane
-```bash
-cd control-plane
-pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# In another terminal, seed test data
-./seed_data.sh
-```
-
-#### UI
-```bash
-cd ui
-npm install
-npm run dev
-```
-
-Then open http://localhost:5173
-
-## Features
-
-✅ **Node Registration API** - Nodes can register with the control plane
-✅ **Node List Display** - UI shows all registered nodes with capabilities
-✅ **Real-time Refresh** - Manually refresh node list
-✅ **Responsive Design** - Modern card-based layout with dark theme
-
-## Project Structure
+### Communication Flow
 
 ```
-MIaaS/
-├── control-plane/       # FastAPI backend
-│   ├── app/
-│   │   └── main.py     # API endpoints
-│   ├── Dockerfile
-│   └── requirements.txt
-├── ui/                  # React frontend
-│   ├── src/
-│   │   ├── components/ # React components
-│   │   ├── App.jsx     # Main app
-│   │   └── main.jsx
-│   ├── Dockerfile
-│   └── nginx.conf
-├── ops/                 # Deployment configs
-│   └── docker-compose.yml
-└── docs/               # Documentation
-
+Client → Control Plane → Message Queue → Inference Engine → Model Registry
+                ↓                              ↓
+            Response                        Results
 ```
 
-## API Endpoints
+1. Client submits inference request to Control Plane
+2. Control Plane validates and queues request
+3. Inference Engine processes request asynchronously
+4. Results returned to client via Control Plane API
 
-### `POST /api/v1/nodes/register`
-Register a new node with capabilities.
+### Key Features
 
-### `GET /api/v1/nodes`
-List all registered nodes.
-
-See [control-plane/README.md](control-plane/README.md) for full API documentation.
-
-## Screenshots
-
-![MIaaS UI](https://github.com/user-attachments/assets/c6e2a552-64b5-488f-905d-4dee208a63e2)
-
-## Roadmap
-
-- [x] Control plane API (node registration, listing)
-- [x] UI skeleton with node display
-- [ ] Node agent implementation
-- [ ] Template system for deployments
-- [ ] Authentication and authorization
-- [ ] Real-time node status updates
-- [ ] Component catalog (Postgres, Redis, LLMs, etc.)
+- **Multi-Framework Support**: TensorFlow, PyTorch, ONNX, and more
+- **Horizontal Scaling**: Auto-scale inference engines based on load
+- **Async Processing**: Non-blocking request handling with message queues
+- **Model Versioning**: Track and manage multiple model versions
+- **RESTful API**: Simple HTTP/JSON interface for all operations
 
 ## Development Environment Setup
 
-This project uses VS Code and GitHub Copilot for AI-powered development.
+This project uses VS Code and GitHub Copilot for AI-powered development. All environment setup is automated, including Git and GitHub integration.
 
-### Automated Setup
-1. Open PowerShell in this directory
-2. Run `./setup.ps1`
-3. Open project in VS Code: `code .`
+## Automated Setup
+
+1. Open PowerShell in this directory.
+2. Run the setup script:
+   ```powershell
+   ./setup.ps1
+   ```
+3. Open the project in VS Code:
+   ```powershell
+   code .
+   ```
+
+## What the Script Does
+- Installs Copilot and Copilot Chat extensions for VS Code
+- (Optional) Installs Python extension if uncommented
+- Applies workspace settings for Copilot best practices
+- Initializes a git repository and configures your user info
+- Creates a new GitHub repository and pushes the initial commit
+
+## Manual Steps (if needed)
+- Ensure you are using PowerShell 7+
+- Check `.vscode/settings.json` for Copilot configuration
+- If you want to use a different GitHub repo, update the script accordingly
+
+## Troubleshooting
+- If extension install fails, update VS Code and retry
+- For more help, see the official Copilot docs
+
+## Repository Structure
+
+```
+MIaaS/
+├── services/           # Microservices
+│   ├── control-plane/  # Request orchestration service
+│   ├── inference-engine/ # Model execution service
+│   └── model-registry/ # Model storage service
+├── ops/                # Operations & deployment
+│   └── docker-compose.yml # Container orchestration
+├── docs/               # Documentation
+│   ├── protocol.md     # API specifications
+│   └── onboarding.md   # Developer onboarding guide
+├── setup.ps1           # Development environment setup
+└── README.md           # This file
+```
+
+## Quick Start
+
+### Running the Control Plane
+
+Start the control plane service using Docker Compose:
+
+```bash
+cd ops
+docker-compose up -d
+```
+
+Verify the service is running:
+```bash
+curl http://localhost:8080/health
+```
+
+### Documentation
+
+- **[Protocol Specification](docs/protocol.md)**: API endpoints and communication protocols
+- **[Onboarding Guide](docs/onboarding.md)**: Comprehensive developer setup and workflow
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+1. Create a feature branch from `master`
+2. Make your changes following the project conventions
+3. Test locally using Docker Compose
+4. Submit a pull request with clear description
 
-## License
-
-See [LICENSE](LICENSE) for details.
+For detailed contribution guidelines, see [docs/onboarding.md](docs/onboarding.md).

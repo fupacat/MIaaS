@@ -2,6 +2,21 @@ version: '3.8'
 
 services:
   control-plane:
+    image: miaas/control-plane:latest
+    build:
+      context: ../services/control-plane
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVICE_NAME=control-plane
+      - LOG_LEVEL=info
+    networks:
+      - miaas-network
+    restart: unless-stopped
+
+networks:
+  miaas-network:
     build:
       context: ../control-plane
       dockerfile: Dockerfile
