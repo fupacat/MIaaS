@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  control-plane:
+    build:
+      context: ./control-plane
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - LOG_LEVEL=info
+    networks:
+      - miaas-network
+
+  agent:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
+    environment:
+      - CONTROL_PLANE_URL=http://control-plane:8080
+      - HEARTBEAT_INTERVAL=30
+    depends_on:
+      - control-plane
+    networks:
+      - miaas-network
+
+networks:
+  miaas-network:
+    driver: bridge

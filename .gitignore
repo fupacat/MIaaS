@@ -1,6 +1,16 @@
 # Ignore Python cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
 
 # Ignore node modules
 node_modules/
@@ -14,3 +24,6 @@ node_modules/
 # Ignore OS files
 .DS_Store
 Thumbs.db
+
+# Ignore Docker volumes
+volumes/
