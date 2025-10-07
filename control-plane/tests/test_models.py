@@ -1,80 +1,120 @@
-"""Tests for Node model."""
+"""Tests for Pydantic models."""
 import pytest
-from datetime import datetime
-from app.models import Node
+from pydantic import ValidationError
+from app.models import (
+    CapabilitiesModel,
+    NodeRegisterRequest,
+    NodeResponse,
+    HeartbeatRequest,
+    DeploymentRequest,
+)
 
 
-def test_node_creation():
-    """Test creating a Node instance."""
-    node = Node(
-        node_id="test-node-1",
-        hostname="test-host",
-        capabilities=["docker", "compose"],
-        status="active"
+def test_capabilities_model():
+    """Test CapabilitiesModel validation."""
+    caps = CapabilitiesModel(
+        os="linux",
+        cpu_count=8,
+        mem_mb=16000,
+        gpus=[]
     )
     
-    assert node.id == "test-node-1"
-    assert node.hostname == "test-host"
-    assert node.capabilities == ["docker", "compose"]
-    assert node.status == "active"
-    assert isinstance(node.last_heartbeat, datetime)
+    assert caps.os == "linux"
+    assert caps.cpu_count == 8
+    assert caps.mem_mb == 16000
+    assert caps.gpus == []
 
 
-def test_node_to_dict():
-    """Test converting Node to dictionary."""
-    node = Node(
-        node_id="test-node-1",
-        hostname="test-host",
-        capabilities=["docker"],
-        status="active"
+def test_capabilities_model_missing_required():
+    """Test CapabilitiesModel with missing required fields."""
+    with pytest.raises(ValidationError):
+        CapabilitiesModel(
+            os="linux",
+            cpu_count=8
+            # Missing mem_mb
+        )
+
+
+def test_node_register_request():
+    """Test NodeRegisterRequest validation."""
+    request = NodeRegisterRequest(
+        name="worker-01",
+        ip="192.168.1.10",
+        capabilities=CapabilitiesModel(
+            os="linux",
+            cpu_count=8,
+            mem_mb=16000,
+            gpus=[]
+        )
     )
     
-    node_dict = node.to_dict()
-    
-    assert node_dict["id"] == "test-node-1"
-    assert node_dict["hostname"] == "test-host"
-    assert node_dict["capabilities"] == ["docker"]
-    assert node_dict["status"] == "active"
-    assert "last_heartbeat" in node_dict
+    assert request.name == "worker-01"
+    assert request.ip == "192.168.1.10"
+    assert request.capabilities.os == "linux"
 
 
-def test_node_from_dict():
-    """Test creating Node from dictionary."""
-    data = {
-        "id": "test-node-1",
-        "hostname": "test-host",
-        "capabilities": ["docker", "compose"],
-        "status": "active"
-    }
-    
-    node = Node.from_dict(data)
-    
-    assert node.id == "test-node-1"
-    assert node.hostname == "test-host"
-    assert node.capabilities == ["docker", "compose"]
-    assert node.status == "active"
-
-
-def test_node_update_heartbeat():
-    """Test updating node heartbeat."""
-    node = Node(
-        node_id="test-node-1",
-        hostname="test-host"
+def test_node_response():
+    """Test NodeResponse model."""
+    response = NodeResponse(
+        id="node-123",
+        name="worker-01",
+        ip="192.168.1.10",
+        capabilities={"os": "linux", "cpu_count": 8},
+        last_seen=1234567890.0,
+        status="online"
     )
     
-    original_heartbeat = node.last_heartbeat
-    node.update_heartbeat()
+    assert response.id == "node-123"
+    assert response.name == "worker-01"
+    assert response.status == "online"
+
+
+def test_heartbeat_request():
+    """Test HeartbeatRequest with default values."""
+    heartbeat = HeartbeatRequest()
     
-    assert node.last_heartbeat >= original_heartbeat
+    assert heartbeat.cpu_usage == 0.0
+    assert heartbeat.mem_usage == 0.0
+    assert heartbeat.disk_free_mb == 0
+    assert heartbeat.running_containers == []
 
 
-def test_node_default_values():
-    """Test Node default values."""
-    node = Node(
-        node_id="test-node-1",
-        hostname="test-host"
+def test_heartbeat_request_with_values():
+    """Test HeartbeatRequest with provided values."""
+    heartbeat = HeartbeatRequest(
+        cpu_usage=45.5,
+        mem_usage=60.2,
+        disk_free_mb=50000,
+        running_containers=["postgres", "redis"]
     )
     
-    assert node.capabilities == []
-    assert node.status == "active"
-    assert isinstance(node.last_heartbeat, datetime)
+    assert heartbeat.cpu_usage == 45.5
+    assert heartbeat.mem_usage == 60.2
+    assert heartbeat.disk_free_mb == 50000
+    assert len(heartbeat.running_containers) == 2
+
+
+def test_deployment_request():
+    """Test DeploymentRequest validation."""
+    deployment = DeploymentRequest(
+        deployment_id="deploy-123",
+        template_id="postgres",
+        rendered_compose="version: '3.8'\nservices:...",
+        env={"POSTGRES_PASSWORD": "secret"},
+        action="apply"
+    )
+    
+    assert deployment.deployment_id == "deploy-123"
+    assert deployment.template_id == "postgres"
+    assert deployment.action == "apply"
+    assert deployment.env["POSTGRES_PASSWORD"] == "secret"
+
+
+def test_deployment_request_missing_fields():
+    """Test DeploymentRequest with missing required fields."""
+    with pytest.raises(ValidationError):
+        DeploymentRequest(
+            deployment_id="deploy-123",
+            template_id="postgres"
+            # Missing required fields
+        )

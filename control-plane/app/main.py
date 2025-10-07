@@ -1,10 +1,19 @@
+"""FastAPI application entry point for MIaaS Control Plane.
+
+This module initializes the FastAPI application, sets up middleware,
+includes API routers, and provides health check endpoints.
+"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import uuid
-import time
 
-app = FastAPI(title="MIaaS Control Plane", version="0.1.0")
+from app.api.v1 import nodes, deployments
+from app.db import init_db
+
+app = FastAPI(
+    title="MIaaS Control Plane",
+    version="0.1.0",
+    description="Model Infrastructure as a Service - Control Plane API",
+)
 
 # Enable CORS for local development
 app.add_middleware(
@@ -15,35 +24,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory storage for MVP
-nodes = {}
+# Include API routers
+app.include_router(nodes.router, prefix="/api/v1")
+app.include_router(deployments.router, prefix="/api/v1")
 
 
-class RegisterReq(BaseModel):
-    name: str
-    ip: str
-    capabilities: dict
-
-
-@app.post("/api/v1/nodes/register")
-def register_node(body: RegisterReq):
-    node_id = str(uuid.uuid4())
-    nodes[node_id] = {
-        "id": node_id,
-        "name": body.name,
-        "ip": body.ip,
-        "capabilities": body.capabilities,
-        "last_seen": time.time(),
-        "status": "online",
-    }
-    return {"node_id": node_id, "node_token": f"node-token-{node_id}"}
-
-
-@app.get("/api/v1/nodes")
-def list_nodes():
-    return list(nodes.values())
+@app.on_event("startup")
+def startup_event():
+    """Initialize database on startup."""
+    init_db()
 
 
 @app.get("/")
 def root():
-    return {"message": "MIaaS Control Plane API", "version": "0.1.0"}
+    """Root endpoint with API information.
+    
+    Returns:
+        Basic API information and version
+    """
+    return {
+        "message": "MIaaS Control Plane API",
+        "version": "0.1.0",
+        "docs": "/docs",
+    }
+
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint.
+    
+    Returns:
+        Health status of the control plane
+    """
+    return {"status": "healthy"}

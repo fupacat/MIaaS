@@ -1,73 +1,51 @@
-"""Tests for API endpoints."""
-import pytest
-from app.api import app
-from app.storage import storage
-
-
-@pytest.fixture
-def client():
-    """Create a test client for the Flask app."""
-    app.config['TESTING'] = True
-    with app.test_client() as client:
-        # Clear storage before each test
-        storage._nodes.clear()
-        yield client
+"""Tests for FastAPI endpoints."""
 
 
 def test_health_endpoint(client):
     """Test health check endpoint."""
     response = client.get('/health')
     assert response.status_code == 200
-    assert response.json['status'] == 'healthy'
+    assert response.json()['status'] == 'healthy'
+
+
+def test_root_endpoint(client):
+    """Test root endpoint."""
+    response = client.get('/')
+    assert response.status_code == 200
+    assert 'version' in response.json()
 
 
 def test_register_node(client):
     """Test node registration endpoint."""
     node_data = {
-        "id": "node-1",
-        "hostname": "worker-01",
-        "capabilities": ["docker", "compose"],
-        "status": "active"
+        "name": "worker-01",
+        "ip": "192.168.1.10",
+        "capabilities": {
+            "os": "linux",
+            "cpu_count": 8,
+            "mem_mb": 32000,
+            "gpus": []
+        }
     }
     
     response = client.post('/api/v1/nodes/register', json=node_data)
     
     assert response.status_code == 201
-    assert response.json['message'] == 'Node registered successfully'
-    assert response.json['node']['id'] == 'node-1'
-    assert response.json['node']['hostname'] == 'worker-01'
-    assert response.json['node']['capabilities'] == ["docker", "compose"]
+    data = response.json()
+    assert 'node_id' in data
+    assert 'node_token' in data
+    assert data['control_plane_url'] == 'http://localhost:8080'
 
 
-def test_register_node_missing_id(client):
-    """Test node registration without ID."""
+def test_register_node_missing_fields(client):
+    """Test node registration with missing fields."""
     node_data = {
-        "hostname": "worker-01"
+        "name": "worker-01"
     }
     
     response = client.post('/api/v1/nodes/register', json=node_data)
     
-    assert response.status_code == 400
-    assert 'id' in response.json['error']
-
-
-def test_register_node_missing_hostname(client):
-    """Test node registration without hostname."""
-    node_data = {
-        "id": "node-1"
-    }
-    
-    response = client.post('/api/v1/nodes/register', json=node_data)
-    
-    assert response.status_code == 400
-    assert 'hostname' in response.json['error']
-
-
-def test_register_node_no_data(client):
-    """Test node registration without data."""
-    response = client.post('/api/v1/nodes/register')
-    
-    assert response.status_code == 400
+    assert response.status_code == 422  # FastAPI validation error
 
 
 def test_list_nodes_empty(client):
@@ -75,22 +53,31 @@ def test_list_nodes_empty(client):
     response = client.get('/api/v1/nodes')
     
     assert response.status_code == 200
-    assert response.json['nodes'] == []
-    assert response.json['count'] == 0
+    assert response.json() == []
 
 
 def test_list_nodes(client):
     """Test listing registered nodes."""
     # Register two nodes
     node1 = {
-        "id": "node-1",
-        "hostname": "worker-01",
-        "capabilities": ["docker"]
+        "name": "worker-01",
+        "ip": "192.168.1.10",
+        "capabilities": {
+            "os": "linux",
+            "cpu_count": 8,
+            "mem_mb": 16000,
+            "gpus": []
+        }
     }
     node2 = {
-        "id": "node-2",
-        "hostname": "worker-02",
-        "capabilities": ["compose"]
+        "name": "worker-02",
+        "ip": "192.168.1.11",
+        "capabilities": {
+            "os": "linux",
+            "cpu_count": 4,
+            "mem_mb": 8000,
+            "gpus": []
+        }
     }
     
     client.post('/api/v1/nodes/register', json=node1)
@@ -99,25 +86,32 @@ def test_list_nodes(client):
     response = client.get('/api/v1/nodes')
     
     assert response.status_code == 200
-    assert response.json['count'] == 2
-    assert len(response.json['nodes']) == 2
+    nodes = response.json()
+    assert len(nodes) == 2
 
 
 def test_get_node(client):
     """Test getting a specific node."""
     node_data = {
-        "id": "node-1",
-        "hostname": "worker-01",
-        "capabilities": ["docker"]
+        "name": "worker-01",
+        "ip": "192.168.1.10",
+        "capabilities": {
+            "os": "linux",
+            "cpu_count": 8,
+            "mem_mb": 16000,
+            "gpus": []
+        }
     }
     
-    client.post('/api/v1/nodes/register', json=node_data)
+    reg_response = client.post('/api/v1/nodes/register', json=node_data)
+    node_id = reg_response.json()['node_id']
     
-    response = client.get('/api/v1/nodes/node-1')
+    response = client.get(f'/api/v1/nodes/{node_id}')
     
     assert response.status_code == 200
-    assert response.json['id'] == 'node-1'
-    assert response.json['hostname'] == 'worker-01'
+    node = response.json()
+    assert node['id'] == node_id
+    assert node['name'] == 'worker-01'
 
 
 def test_get_node_not_found(client):
@@ -125,33 +119,90 @@ def test_get_node_not_found(client):
     response = client.get('/api/v1/nodes/non-existent')
     
     assert response.status_code == 404
-    assert 'not found' in response.json['error'].lower()
 
 
 def test_update_existing_node(client):
-    """Test updating an existing node."""
+    """Test updating an existing node by re-registering."""
     node_data = {
-        "id": "node-1",
-        "hostname": "worker-01",
-        "capabilities": ["docker"]
+        "name": "worker-01",
+        "ip": "192.168.1.10",
+        "capabilities": {
+            "os": "linux",
+            "cpu_count": 8,
+            "mem_mb": 16000,
+            "gpus": []
+        }
     }
     
     # Register node
-    client.post('/api/v1/nodes/register', json=node_data)
+    reg_response = client.post('/api/v1/nodes/register', json=node_data)
+    node_id = reg_response.json()['node_id']
     
-    # Update node
+    # Update node with same name
     updated_data = {
-        "id": "node-1",
-        "hostname": "worker-01-updated",
-        "capabilities": ["docker", "compose"]
+        "name": "worker-01",
+        "ip": "192.168.1.20",
+        "capabilities": {
+            "os": "linux",
+            "cpu_count": 16,
+            "mem_mb": 32000,
+            "gpus": [{"id": 0, "model": "RTX 3090"}]
+        }
     }
     
     response = client.post('/api/v1/nodes/register', json=updated_data)
     
     assert response.status_code == 201
-    assert response.json['node']['hostname'] == 'worker-01-updated'
-    assert len(response.json['node']['capabilities']) == 2
+    # Should return same node_id since we're updating by name
+    assert response.json()['node_id'] == node_id
     
     # Verify only one node exists
     list_response = client.get('/api/v1/nodes')
-    assert list_response.json['count'] == 1
+    assert len(list_response.json()) == 1
+
+
+def test_heartbeat(client):
+    """Test node heartbeat endpoint."""
+    # Register a node first
+    node_data = {
+        "name": "worker-01",
+        "ip": "192.168.1.10",
+        "capabilities": {
+            "os": "linux",
+            "cpu_count": 8,
+            "mem_mb": 16000,
+            "gpus": []
+        }
+    }
+    
+    reg_response = client.post('/api/v1/nodes/register', json=node_data)
+    node_id = reg_response.json()['node_id']
+    
+    # Send heartbeat
+    heartbeat_data = {
+        "cpu_usage": 45.5,
+        "mem_usage": 60.2,
+        "disk_free_mb": 50000,
+        "running_containers": ["postgres", "redis"]
+    }
+    
+    response = client.post(f'/api/v1/nodes/{node_id}/heartbeat', json=heartbeat_data)
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data['status'] == 'ok'
+    assert 'timestamp' in data
+
+
+def test_heartbeat_not_found(client):
+    """Test heartbeat for non-existent node."""
+    heartbeat_data = {
+        "cpu_usage": 45.5,
+        "mem_usage": 60.2,
+        "disk_free_mb": 50000,
+        "running_containers": []
+    }
+    
+    response = client.post('/api/v1/nodes/non-existent/heartbeat', json=heartbeat_data)
+    
+    assert response.status_code == 404

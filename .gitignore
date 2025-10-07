@@ -33,3 +33,7 @@ Thumbs.db
 
 # Ignore Docker volumes
 volumes/
+
+# Ignore SQLite databases
+*.db
+*.db-journal

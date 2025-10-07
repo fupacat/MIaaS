@@ -1,66 +1,69 @@
-"""Data models for the Control Plane."""
-from datetime import datetime, timezone
+"""Pydantic models for API requests and responses."""
+from datetime import datetime
 from typing import Dict, List, Optional
+from pydantic import BaseModel, Field
 
 
-class Node:
-    """Node model representing a registered agent node."""
-    
-    def __init__(self, 
-                 node_id: str,
-                 hostname: str,
-                 capabilities: Optional[List[str]] = None,
-                 status: str = "active",
-                 last_heartbeat: Optional[datetime] = None):
-        """Initialize a Node instance.
-        
-        Args:
-            node_id: Unique identifier for the node
-            hostname: Hostname of the node
-            capabilities: List of capabilities the node supports
-            status: Current status of the node (active, inactive, etc.)
-            last_heartbeat: Timestamp of the last heartbeat received
-        """
-        self.id = node_id
-        self.hostname = hostname
-        self.capabilities = capabilities or []
-        self.status = status
-        self.last_heartbeat = last_heartbeat or datetime.now(timezone.utc)
-    
-    def to_dict(self) -> Dict:
-        """Convert node to dictionary representation.
-        
-        Returns:
-            Dictionary representation of the node
-        """
-        return {
-            "id": self.id,
-            "hostname": self.hostname,
-            "capabilities": self.capabilities,
-            "status": self.status,
-            "last_heartbeat": self.last_heartbeat.isoformat()
-        }
-    
-    @classmethod
-    def from_dict(cls, data: Dict) -> 'Node':
-        """Create a Node instance from a dictionary.
-        
-        Args:
-            data: Dictionary containing node data
-            
-        Returns:
-            Node instance
-        """
-        return cls(
-            node_id=data.get("id"),
-            hostname=data.get("hostname"),
-            capabilities=data.get("capabilities", []),
-            status=data.get("status", "active"),
-            last_heartbeat=datetime.fromisoformat(data["last_heartbeat"]) 
-                          if "last_heartbeat" in data 
-                          else datetime.now(timezone.utc)
-        )
-    
-    def update_heartbeat(self):
-        """Update the last_heartbeat timestamp to current time."""
-        self.last_heartbeat = datetime.now(timezone.utc)
+class CapabilitiesModel(BaseModel):
+    """Node capabilities model."""
+    os: str = Field(..., description="Operating system")
+    cpu_count: int = Field(..., description="Number of CPU cores")
+    mem_mb: int = Field(..., description="Total memory in MB")
+    disk_mb: Optional[int] = Field(None, description="Total disk space in MB")
+    gpus: List[Dict] = Field(default_factory=list, description="List of available GPUs")
+    docker: Optional[Dict] = Field(None, description="Docker information")
+    k8s: Optional[Dict] = Field(None, description="Kubernetes information")
+
+
+class NodeRegisterRequest(BaseModel):
+    """Request model for node registration."""
+    name: str = Field(..., description="Node name")
+    ip: str = Field(..., description="Node IP address")
+    capabilities: CapabilitiesModel = Field(..., description="Node capabilities")
+
+
+class NodeResponse(BaseModel):
+    """Response model for node information."""
+    id: str = Field(..., description="Node ID")
+    name: str = Field(..., description="Node name")
+    ip: str = Field(..., description="Node IP address")
+    capabilities: Dict = Field(..., description="Node capabilities")
+    last_seen: float = Field(..., description="Last seen timestamp")
+    status: str = Field(..., description="Node status")
+
+
+class NodeRegisterResponse(BaseModel):
+    """Response model for node registration."""
+    node_id: str = Field(..., description="Assigned node ID")
+    node_token: str = Field(..., description="Node authentication token")
+    control_plane_url: str = Field(..., description="Control plane URL")
+
+
+class HeartbeatRequest(BaseModel):
+    """Request model for node heartbeat."""
+    cpu_usage: float = Field(0.0, description="CPU usage percentage")
+    mem_usage: float = Field(0.0, description="Memory usage percentage")
+    disk_free_mb: int = Field(0, description="Free disk space in MB")
+    running_containers: List[str] = Field(default_factory=list, description="List of running containers")
+
+
+class HeartbeatResponse(BaseModel):
+    """Response model for heartbeat."""
+    status: str = Field(..., description="Response status")
+    timestamp: float = Field(..., description="Server timestamp")
+
+
+class DeploymentRequest(BaseModel):
+    """Request model for deployment."""
+    deployment_id: str = Field(..., description="Deployment ID")
+    template_id: str = Field(..., description="Template ID")
+    rendered_compose: str = Field(..., description="Rendered docker-compose YAML")
+    env: Dict[str, str] = Field(default_factory=dict, description="Environment variables")
+    action: str = Field(..., description="Action to perform: apply or remove")
+
+
+class DeploymentResponse(BaseModel):
+    """Response model for deployment."""
+    deployment_id: str = Field(..., description="Deployment ID")
+    status: str = Field(..., description="Deployment status")
+    message: str = Field(..., description="Status message")
