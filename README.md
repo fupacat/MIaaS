@@ -1,4 +1,12 @@
-# MIaaS Environment Setup
+# MIaaS - Model Infrastructure as a Service
+
+MIaaS is an open platform for orchestrating AI/ML infrastructure across distributed nodes.
+
+## 🚀 Quick Start
+
+The MVP is ready to run! See [QUICKSTART.md](QUICKSTART.md) to run the control plane and agent in minutes.
+
+## About This Project
 
 This project uses VS Code and GitHub Copilot for AI-powered development. All environment setup is automated, including Git and GitHub integration.
 
@@ -30,3 +38,10 @@ This project uses VS Code and GitHub Copilot for AI-powered development. All env
 - If extension install fails, update VS Code and retry
 - For more help, see the official Copilot docs
 - If GitHub repo creation fails, check your authentication with `gh auth status`
+
+## Project Documentation
+
+- [QUICKSTART.md](QUICKSTART.md) - Run the MVP in minutes
+- [MIaaS.md](MIaaS.md) - Full architecture and roadmap
+- [Agent README](agent/README.md) - Agent documentation
+- [Control Plane README](control-plane/README.md) - Control plane documentation
