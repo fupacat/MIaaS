@@ -1,0 +1,72 @@
+name: AI Agent Triage & Enrichment
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Runs every Monday at 6am UTC
+  workflow_dispatch:
+
+jobs:
+  triage-enrich:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Triage and enrich backlog issues
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const repo = context.repo.repo;
+            const owner = context.repo.owner;
+            // Fetch all backlog issues
+            const issues = await github.rest.issues.listForRepo({ owner, repo, labels: 'backlog', state: 'open' });
+            for (const issue of issues.data) {
+              // Check for 'fully fleshed out' in body or checklist
+              const isFleshedOut = /fully fleshed out.*?\[x\]/i.test(issue.body || '');
+              if (!isFleshedOut) {
+                // Comment requesting enrichment
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  body: 'This story needs more context or acceptance criteria. Please provide missing details and check the "fully fleshed out" box when ready.'
+                });
+                // Add needs-enrichment label if not present
+                if (!issue.labels.some(label => label.name === 'needs-enrichment')) {
+                  await github.rest.issues.addLabels({
+                    owner,
+                    repo,
+                    issue_number: issue.number,
+                    labels: ['needs-enrichment']
+                  });
+                }
+                  // AI agent enrichment step
+                  const aiResponse = await fetch('https://api.example.com/enrich', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      title: issue.title,
+                      body: issue.body
+                    })
+                  });
+                  if (aiResponse.ok) {
+                    const aiSuggestion = await aiResponse.json();
+                    await github.rest.issues.createComment({
+                      owner,
+                      repo,
+                      issue_number: issue.number,
+                      body: `AI Agent Suggestion:\n${aiSuggestion.suggestion}`
+                    });
+                  }
+              } else {
+                // Remove needs-enrichment label if present
+                if (issue.labels.some(label => label.name === 'needs-enrichment')) {
+                  await github.rest.issues.removeLabel({
+                    owner,
+                    repo,
+                    issue_number: issue.number,
+                    name: 'needs-enrichment'
+                  });
+                }
+                // Optionally move to Ready lane in project (requires project API integration)
+                // ...
+              }
+            }

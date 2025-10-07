@@ -4,16 +4,32 @@ __pycache__/
 *.pyo
 *.pyd
 .pytest_cache/
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
 
-# Ignore node modules
+# Ignore node modules and build artifacts
 node_modules/
+dist/
+build/
+*.log
 
 # Ignore VS Code settings
 .vscode/
 
 # Ignore environment files
 .env
+.env.local
+.env.production
 
 # Ignore OS files
 .DS_Store
 Thumbs.db
+
+# Ignore Docker volumes
+volumes/
