@@ -1,0 +1,25 @@
+.node-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background-color: #252525;
+  border-radius: 12px;
+  border: 2px dashed #444;
+}
+
+.empty-state p {
+  margin: 0.5rem 0;
+  font-size: 1.1rem;
+  color: #aaa;
+}
+
+.empty-state .hint {
+  font-size: 0.95rem;
+  color: #777;
+}
