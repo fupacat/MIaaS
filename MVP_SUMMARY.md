@@ -168,11 +168,20 @@ POST /api/v1/nodes/{node_id}/heartbeat
 
 This MVP provides the foundation for:
 - Adding deployment execution capabilities to the agent
-- Implementing authentication with JWT tokens
+- ✅ **COMPLETED**: Implementing authentication with JWT tokens
 - Adding database persistence to control plane
 - Implementing WebSocket for log streaming
 - Adding GPU detection and container enumeration
 - Building the UI for node management
+
+## Security
+
+**JWT Authentication** ✅ (Implemented)
+- Node registration issues JWT tokens (HS256)
+- Heartbeat endpoint requires Bearer token authentication
+- Tokens expire after 24 hours (configurable)
+- Authorization checks prevent node impersonation
+- See [JWT Authentication Guide](docs/JWT_AUTHENTICATION.md) for details
 
 ## References
 
