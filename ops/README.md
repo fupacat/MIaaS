@@ -1,23 +1,38 @@
 # MIaaS Operations
 
-Docker Compose configuration for running the complete MIaaS stack.
+⚠️ **Note**: This directory contains legacy deployment configurations. 
 
-## Quick Start
+## Recommended Approach
 
-### Start all services
+**Use the root-level `docker-compose.yml` instead:**
+
 ```bash
-docker compose up --build
+cd ..
+docker-compose up --build
 ```
 
-### Start in detached mode
-```bash
-docker compose up -d
-```
+See [QUICKSTART.md](../QUICKSTART.md) for detailed instructions.
 
-### Stop all services
-```bash
-docker compose down
-```
+## Legacy Files
+
+The files in this directory are from the original project structure:
+- `docker-compose.yml` - Legacy compose file (broken, do not use)
+- `README.md` - This file
+
+## Current Deployment
+
+For deploying MIaaS, use the root-level files:
+- **[docker-compose.yml](../docker-compose.yml)** - Main orchestration file
+- **[QUICKSTART.md](../QUICKSTART.md)** - Deployment guide
+- **[control-plane/Dockerfile](../control-plane/Dockerfile)** - Control plane container
+- **[agent/Dockerfile](../agent/Dockerfile)** - Agent container
+- **[ui/Dockerfile](../ui/Dockerfile)** - UI container
+
+---
+
+## Original Content (For Reference Only)
+
+### Quick Start (Outdated)
 
 ## Services
 
