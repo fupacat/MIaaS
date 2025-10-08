@@ -85,6 +85,8 @@ pip install -r requirements.txt
 python -m pytest tests/ -v
 ```
 
+**Note:** Agent tests must be run from the `agent/` directory due to module import requirements.
+
 ## Test Coverage Goals
 
 ### Current Coverage (MVP - Sprint 1)
