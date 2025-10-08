@@ -1,7 +1,10 @@
 ---
 name: Bug Report
-description: File a bug report to help us improve MIaaS
+about: Template for bugs
+title: "[BUG]"
 labels: bug
+assignees: ''
+
 ---
 
 **Describe the bug**

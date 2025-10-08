@@ -1,7 +1,10 @@
 ---
 name: Feature Request
-description: Suggest a new feature or improvement for MIaaS
+about: Template for feature requests
+title: "[Feature]"
 labels: enhancement
+assignees: fupacat
+
 ---
 
 **Describe the feature**

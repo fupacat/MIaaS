@@ -1,7 +1,10 @@
 ---
 name: Story
-description: Capture a user story or workflow for MIaaS
+about: Template for user issues
+title: "[Story]"
 labels: story
+assignees: fupacat
+
 ---
 
 **Story**
