@@ -32,11 +32,19 @@ This installs GitHub Copilot extensions and configures your workspace.
 
 ### 3. Start the Services
 
-Launch the control plane using Docker Compose:
+Launch the control plane and agent using Docker Compose:
 
 ```bash
-cd ops
-docker-compose up -d
+docker-compose up --build
+```
+
+This will start:
+- Control plane on port 8080
+- An agent that automatically registers and sends heartbeats
+
+To run in detached mode:
+```bash
+docker-compose up -d --build
 ```
 
 Verify services are running:
@@ -54,25 +62,48 @@ curl http://localhost:8080/health
 Expected response:
 ```json
 {
-  "status": "healthy",
-  "timestamp": "2024-01-01T00:00:00Z"
+  "status": "healthy"
 }
+```
+
+List registered nodes:
+```bash
+curl http://localhost:8080/api/v1/nodes
+```
+
+View interactive API documentation:
+```bash
+open http://localhost:8080/docs
 ```
 
 ## Repository Structure
 
 ```
 MIaaS/
-├── services/           # Microservices
-│   ├── control-plane/  # Request orchestration
-│   ├── inference-engine/ # Model execution
-│   └── model-registry/ # Model storage
-├── ops/                # Operations & deployment
-│   └── docker-compose.yml
+├── control-plane/      # FastAPI orchestration backend
+│   ├── app/
+│   │   ├── api/v1/     # API endpoints
+│   │   │   ├── nodes.py       # Node management
+│   │   │   └── deployments.py # Deployment management
+│   │   ├── db/         # Database models
+│   │   ├── orchestrator/ # Placement engine
+│   │   └── models.py   # Pydantic models
+│   ├── tests/          # Test suite (27 tests)
+│   └── main.py         # Application entry point
+├── agent/              # Node agent daemon
+│   ├── agent.py        # Capability detection & heartbeat
+│   ├── Dockerfile
+│   └── requirements.txt
+├── ui/                 # React web interface
+│   ├── src/
+│   │   ├── components/ # NodeCard, NodeList
+│   │   └── App.jsx     # Main application
+│   └── package.json
 ├── docs/               # Documentation
 │   ├── protocol.md     # API specifications
 │   └── onboarding.md   # This file
-├── setup.ps1           # Development setup script
+├── docker-compose.yml  # Multi-container orchestration
+├── QUICKSTART.md       # Quick start guide
 └── README.md           # Project overview
 ```
 
@@ -93,11 +124,16 @@ git checkout -b feature/your-feature-name
 ### 3. Test Locally
 
 ```bash
-# Run unit tests
-pytest
+# Run control plane tests
+cd control-plane
+pytest -v
 
-# Run integration tests
-docker-compose up --build
+# Run all tests with coverage
+pytest --cov=app tests/
+
+# Test API endpoints manually
+curl http://localhost:8080/api/v1/nodes
+curl http://localhost:8080/api/v1/deployments
 ```
 
 ### 4. Submit a Pull Request
@@ -108,70 +144,192 @@ docker-compose up --build
 
 ## Common Tasks
 
-### Adding a New Service
+### Running the Control Plane Locally
 
-1. Create a new directory under `services/`
-2. Add a `Dockerfile` for containerization
-3. Update `ops/docker-compose.yml` to include the service
-4. Document the service API in `docs/protocol.md`
+```bash
+cd control-plane
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
+```
+
+### Running the Agent Locally
+
+```bash
+cd agent
+pip install -r requirements.txt
+python agent.py
+```
+
+Configure the agent with environment variables:
+```bash
+export CONTROL_PLANE_URL=http://localhost:8080
+export HEARTBEAT_INTERVAL=30
+python agent.py
+```
+
+### Running the UI
+
+```bash
+cd ui
+npm install
+npm run dev
+```
+
+The UI will be available at http://localhost:5173
 
 ### Running Tests
 
 ```bash
-# Unit tests
-pytest tests/
+# Control plane tests (27 tests total)
+cd control-plane
+pytest -v
 
-# Integration tests
-pytest tests/integration/
+# Run specific test modules
+pytest tests/test_api.py -v
+pytest tests/test_deployments.py -v
+pytest tests/test_models.py -v
 
-# With coverage
-pytest --cov=services tests/
+# With coverage report
+pytest --cov=app tests/
 ```
 
 ### Debugging
 
 1. Check logs:
    ```bash
+   # All services
+   docker-compose logs -f
+   
+   # Specific service
    docker-compose logs -f control-plane
+   docker-compose logs -f agent
    ```
 
 2. Access a running container:
    ```bash
    docker-compose exec control-plane /bin/bash
+   docker-compose exec agent /bin/bash
    ```
 
-3. Use VS Code debugger with Docker attach
+3. View database contents (SQLite):
+   ```bash
+   docker-compose exec control-plane sqlite3 control_plane.db ".tables"
+   docker-compose exec control-plane sqlite3 control_plane.db "SELECT * FROM nodes;"
+   ```
+
+### Adding a New API Endpoint
+
+1. Define Pydantic models in `control-plane/app/models.py`
+2. Add SQLAlchemy models in `control-plane/app/db/models.py`
+3. Create router in `control-plane/app/api/v1/`
+4. Register router in `control-plane/app/main.py`
+5. Add tests in `control-plane/tests/`
+6. Update API documentation in `control-plane/README.md`
 
 ## Architecture Overview
 
-MIaaS is built on a microservices architecture:
+MIaaS orchestrates AI/ML infrastructure across distributed nodes:
 
-- **Control Plane**: Central orchestrator that receives inference requests, validates them, and routes to appropriate inference engines
-- **Inference Engine**: Executes ML model inference using various frameworks (TensorFlow, PyTorch, etc.)
-- **Model Registry**: Manages model versions, metadata, and storage
+- **Control Plane**: FastAPI backend that manages node registration, heartbeat monitoring, and deployment orchestration
+- **Agent**: Python daemon running on each node that reports capabilities and executes deployments
+- **UI**: React web interface for visualizing nodes and managing deployments
 
 ## Key Concepts
 
-### Inference Request Flow
+### Node Registration Flow
 
-1. Client submits inference request to Control Plane
-2. Control Plane validates request and model availability
-3. Request is queued for processing
-4. Inference Engine pulls request, loads model, and executes
-5. Results are returned to client via Control Plane
+1. Agent starts and detects system capabilities (CPU, memory, disk, GPU)
+2. Agent registers with Control Plane via POST to `/api/v1/nodes/register`
+3. Control Plane assigns a unique node_id and token
+4. Agent stores credentials and begins heartbeat loop
 
-### Model Management
+### Heartbeat Mechanism
 
-- Models are versioned and stored in the Model Registry
-- Each model has metadata (framework, input/output schemas)
-- Models can be deployed, deprecated, or archived
+1. Agent sends heartbeat every 30 seconds (configurable)
+2. Heartbeat includes real-time metrics: CPU usage, memory usage, disk space
+3. Control Plane updates node's `last_seen` timestamp and status
+4. Nodes without heartbeat for extended period marked as offline
+
+### Deployment Flow (Planned)
+
+1. User creates deployment via UI or API
+2. Control Plane's orchestrator selects optimal node based on requirements
+3. Deployment request sent to agent on selected node
+4. Agent executes deployment (Docker Compose/K8s)
+5. Status updates streamed back to Control Plane
+
+### Database Schema
+
+- **Nodes**: id, name, ip, capabilities, last_seen, status
+- **Deployments**: id, template_id, node_id, status, created_at
+- Storage: SQLite (MVP) or PostgreSQL (production)
+
+## API Endpoints
+
+### Node Management
+
+```bash
+# Register a node
+POST /api/v1/nodes/register
+{
+  "name": "worker-01",
+  "ip": "192.168.1.10",
+  "capabilities": {
+    "os": "linux",
+    "cpu_count": 8,
+    "mem_mb": 32000,
+    "disk_mb": 500000,
+    "gpus": [{"id": 0, "model": "RTX 3090", "mem_mb": 24000}]
+  }
+}
+
+# List all nodes
+GET /api/v1/nodes
+
+# Get specific node
+GET /api/v1/nodes/{node_id}
+
+# Send heartbeat
+POST /api/v1/nodes/{node_id}/heartbeat
+{
+  "cpu_usage": 25.5,
+  "mem_usage": 60.2,
+  "disk_free_mb": 450000,
+  "running_containers": []
+}
+```
+
+### Deployment Management
+
+```bash
+# Create deployment
+POST /api/v1/deployments
+{
+  "deployment_id": "postgres-prod-01",
+  "template_id": "postgres",
+  "rendered_compose": "version: '3.8'...",
+  "env": {"POSTGRES_PASSWORD": "secret"},
+  "action": "apply"
+}
+
+# List deployments
+GET /api/v1/deployments
+
+# Get deployment status
+GET /api/v1/deployments/{deployment_id}
+
+# Delete deployment
+DELETE /api/v1/deployments/{deployment_id}
+```
 
 ## Resources
 
-- [Protocol Specification](protocol.md) - API documentation
-- [Architecture Overview](../README.md) - High-level design
-- Project Wiki - Detailed guides and examples
-- Issue Tracker - Report bugs or request features
+- [Quick Start Guide](../QUICKSTART.md) - Get running in minutes
+- [Control Plane README](../control-plane/README.md) - Detailed API documentation
+- [Agent README](../agent/README.md) - Agent configuration
+- [UI README](../ui/README.md) - UI development guide
+- [Architecture Document](../MIaaS.md) - Full system design
+- [MVP Summary](../MVP_SUMMARY.md) - Implementation details
 
 ## Getting Help
 
