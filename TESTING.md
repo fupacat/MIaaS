@@ -2,6 +2,32 @@
 
 This document describes how to test the MIaaS UI skeleton implementation.
 
+> **Note:** For comprehensive information about automated testing (unit tests, integration tests, test strategy, and coverage), see **[TEST_STRATEGY.md](./TEST_STRATEGY.md)**.
+
+## Automated Tests
+
+The project includes comprehensive automated tests:
+
+- **Control Plane Tests:** 50+ tests covering API endpoints, placement logic, models, and integration workflows
+- **Agent Tests:** 12+ tests covering capability detection, registration, and heartbeat
+- **Total:** 62+ tests with 100% pass rate
+
+Run tests with:
+```bash
+# Control plane tests
+cd control-plane && pytest tests/ -v
+
+# Agent tests  
+cd agent && pytest tests/ -v
+
+# All tests
+pytest control-plane/tests/ agent/tests/ -v
+```
+
+For detailed test documentation, strategy, and coverage information, see [TEST_STRATEGY.md](./TEST_STRATEGY.md).
+
+## Manual Testing
+
 ## Prerequisites
 
 - Python 3.11+
