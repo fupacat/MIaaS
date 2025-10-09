@@ -5,6 +5,7 @@ The Control Plane is the central orchestration component of MIaaS that manages n
 ## Features
 
 - **Node Management**: Register, list, and monitor agent nodes
+- **JWT Authentication**: Secure node authentication with JWT tokens
 - **Deployment Management**: Create, track, and manage service deployments
 - **Heartbeat Monitoring**: Track node health and resource metrics
 - **Orchestrator**: Placement engine for intelligent node selection
@@ -22,6 +23,9 @@ control-plane/
 │   │   └── v1/
 │   │       ├── nodes.py       # Node management endpoints
 │   │       └── deployments.py # Deployment endpoints
+│   ├── auth/
+│   │   ├── jwt_utils.py       # JWT token creation and verification
+│   │   └── dependencies.py    # FastAPI auth dependencies
 │   ├── db/
 │   │   ├── database.py        # Database configuration
 │   │   └── models.py          # SQLAlchemy ORM models
@@ -216,6 +220,47 @@ The API will be available at:
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers 4
 ```
+
+## Authentication
+
+The control plane uses JWT (JSON Web Tokens) for node authentication. When a node registers, it receives a JWT token that must be included in the `Authorization` header for authenticated endpoints.
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `JWT_SECRET` | Secret key for signing JWT tokens | `development-secret-change-in-production` |
+| `JWT_EXPIRATION_HOURS` | Token expiration time in hours | `24` |
+
+**⚠️ Important**: In production, always set a strong, random `JWT_SECRET`.
+
+### Example Authentication Flow
+
+1. **Register a node**:
+```bash
+curl -X POST http://localhost:8080/api/v1/nodes/register \
+  -H "Content-Type: application/json" \
+  -d '{"name": "worker-01", "ip": "192.168.1.10", "capabilities": {...}}'
+```
+
+Response includes `node_token` (JWT):
+```json
+{
+  "node_id": "...",
+  "node_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "control_plane_url": "http://localhost:8080"
+}
+```
+
+2. **Send authenticated heartbeat**:
+```bash
+curl -X POST http://localhost:8080/api/v1/nodes/{node_id}/heartbeat \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{"cpu_usage": 45.5, "mem_usage": 60.2, "disk_free_mb": 100000, "running_containers": []}'
+```
+
+For detailed authentication documentation, see [JWT Authentication Guide](../docs/JWT_AUTHENTICATION.md).
 
 ## Testing
 

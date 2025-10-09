@@ -76,7 +76,7 @@ def register():
         logger.error(f"Failed to register with control plane: {e}")
         raise
 
-def send_heartbeat(node_id):
+def send_heartbeat(node_id, node_token):
     """Send heartbeat with current metrics to control plane"""
     try:
         # Collect current metrics
@@ -91,9 +91,15 @@ def send_heartbeat(node_id):
             "running_containers": []  # Can be enhanced to detect Docker containers
         }
         
+        # Include JWT token in Authorization header
+        headers = {
+            "Authorization": f"Bearer {node_token}"
+        }
+        
         response = requests.post(
             f"{CONTROL_PLANE}/api/v1/nodes/{node_id}/heartbeat",
             json=payload,
+            headers=headers,
             timeout=10
         )
         response.raise_for_status()
@@ -128,7 +134,7 @@ def main():
         try:
             time.sleep(HEARTBEAT_INTERVAL)
             
-            if send_heartbeat(node_id):
+            if send_heartbeat(node_id, node_token):
                 consecutive_failures = 0
             else:
                 consecutive_failures += 1
@@ -137,6 +143,7 @@ def main():
                     try:
                         registration_info = register()
                         node_id = registration_info["node_id"]
+                        node_token = registration_info["node_token"]
                         consecutive_failures = 0
                     except Exception as e:
                         logger.error(f"Re-registration failed: {e}")

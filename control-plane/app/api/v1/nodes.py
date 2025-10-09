@@ -17,6 +17,7 @@ from app.models import (
     HeartbeatResponse,
 )
 from app.db import get_db, NodeDB
+from app.auth import create_node_token, require_node_auth
 
 router = APIRouter(prefix="/nodes", tags=["nodes"])
 
@@ -77,9 +78,12 @@ def register_node(
         db.add(node)
         db.commit()
     
+    # Generate JWT token for the node
+    jwt_token = create_node_token(node_id, request.name)
+    
     return NodeRegisterResponse(
         node_id=node_id,
-        node_token=f"node-token-{node_id}",
+        node_token=jwt_token,
         control_plane_url="http://localhost:8080",
     )
 
@@ -151,6 +155,7 @@ def heartbeat(
     node_id: str,
     request: HeartbeatRequest,
     db: Session = Depends(get_db),
+    authenticated_node_id: str = Depends(require_node_auth),
 ) -> HeartbeatResponse:
     """Update node heartbeat and metrics.
     
@@ -177,6 +182,13 @@ def heartbeat(
             "running_containers": ["postgres", "redis"]
         }
     """
+    # Verify the authenticated node matches the request
+    if authenticated_node_id != node_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Cannot send heartbeat for a different node"
+        )
+    
     node = db.query(NodeDB).filter(NodeDB.id == node_id).first()
     
     if not node:

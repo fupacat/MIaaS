@@ -177,8 +177,9 @@ def test_heartbeat(client):
     
     reg_response = client.post('/api/v1/nodes/register', json=node_data)
     node_id = reg_response.json()['node_id']
+    token = reg_response.json()['node_token']
     
-    # Send heartbeat
+    # Send heartbeat with authentication
     heartbeat_data = {
         "cpu_usage": 45.5,
         "mem_usage": 60.2,
@@ -186,7 +187,11 @@ def test_heartbeat(client):
         "running_containers": ["postgres", "redis"]
     }
     
-    response = client.post(f'/api/v1/nodes/{node_id}/heartbeat', json=heartbeat_data)
+    response = client.post(
+        f'/api/v1/nodes/{node_id}/heartbeat',
+        json=heartbeat_data,
+        headers={"Authorization": f"Bearer {token}"}
+    )
     
     assert response.status_code == 200
     data = response.json()
@@ -196,6 +201,11 @@ def test_heartbeat(client):
 
 def test_heartbeat_not_found(client):
     """Test heartbeat for non-existent node."""
+    # Create a valid token for a fake node ID
+    from app.auth import create_node_token
+    fake_node_id = "non-existent"
+    token = create_node_token(fake_node_id, "fake-node")
+    
     heartbeat_data = {
         "cpu_usage": 45.5,
         "mem_usage": 60.2,
@@ -203,6 +213,10 @@ def test_heartbeat_not_found(client):
         "running_containers": []
     }
     
-    response = client.post('/api/v1/nodes/non-existent/heartbeat', json=heartbeat_data)
+    response = client.post(
+        f'/api/v1/nodes/{fake_node_id}/heartbeat',
+        json=heartbeat_data,
+        headers={"Authorization": f"Bearer {token}"}
+    )
     
     assert response.status_code == 404
