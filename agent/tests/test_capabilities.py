@@ -167,7 +167,7 @@ def test_send_heartbeat_success():
         mock_response.json.return_value = {"status": "ok"}
         mock_post.return_value = mock_response
         
-        result = agent.send_heartbeat("test-node-id")
+        result = agent.send_heartbeat("test-node-id", "test-token")
         
         assert result is True
         
@@ -177,6 +177,10 @@ def test_send_heartbeat_success():
         assert payload["cpu_usage"] == 45.5
         assert payload["mem_usage"] == 60.2
         assert payload["disk_free_mb"] == 50000
+        
+        # Verify Authorization header is set with JWT token
+        headers = call_args[1]["headers"]
+        assert headers["Authorization"] == "Bearer test-token"
 
 
 def test_send_heartbeat_failure():
@@ -193,7 +197,7 @@ def test_send_heartbeat_failure():
         # Use the correct exception type that the code catches
         mock_post.side_effect = requests.exceptions.RequestException("Connection error")
         
-        result = agent.send_heartbeat("test-node-id")
+        result = agent.send_heartbeat("test-node-id", "test-token")
         
         assert result is False
 
@@ -231,7 +235,7 @@ def test_heartbeat_disk_calculation():
         mock_response = MagicMock()
         mock_post.return_value = mock_response
         
-        agent.send_heartbeat("test-node-id")
+        agent.send_heartbeat("test-node-id", "test-token")
         
         # Should be 2048 MB
         call_args = mock_post.call_args
