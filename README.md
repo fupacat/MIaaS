@@ -1,51 +1,59 @@
-# MIaaS - Model Inference as a Service
+# MIaaS - Model Infrastructure as a Service
 
-MIaaS is a scalable microservices platform for deploying and managing machine learning model inference workloads. It provides a unified API for submitting inference requests across multiple ML frameworks.
+MIaaS is an orchestration platform for deploying and managing AI/ML infrastructure across distributed nodes. It provides centralized management for node registration, capability tracking, and service deployments across your infrastructure.
 
 ## Architecture Overview
 
-MIaaS follows a microservices architecture with three core components:
+MIaaS consists of three main components working together:
 
-### Core Services
+### Core Components
 
-1. **Control Plane** (`services/control-plane/`)
-   - Central orchestrator for all inference requests
-   - Validates requests and manages service lifecycle
-   - Handles authentication and rate limiting
-   - Exposes REST API on port 8080
+1. **Control Plane** (`control-plane/`)
+   - Central orchestration hub built with FastAPI
+   - Manages node registration and heartbeat monitoring
+   - Handles deployment requests and placement decisions
+   - Provides RESTful API on port 8080
+   - Database-backed persistent storage (SQLite/Postgres)
 
-2. **Inference Engine** (`services/inference-engine/`)
-   - Executes model inference workloads
-   - Supports multiple ML frameworks (TensorFlow, PyTorch, ONNX)
-   - Scales horizontally based on demand
-   - Pulls models from Model Registry
+2. **Agent** (`agent/`)
+   - Lightweight Python daemon running on each node
+   - Automatic capability detection (CPU, memory, disk, GPU)
+   - Periodic heartbeat with real-time system metrics
+   - Receives and executes deployment commands
+   - Auto-reconnection on network failures
 
-3. **Model Registry** (`services/model-registry/`)
-   - Centralized model storage and versioning
-   - Manages model metadata and schemas
-   - Provides model discovery and retrieval APIs
-   - Tracks model lifecycle (active, deprecated, archived)
+3. **UI** (`ui/`)
+   - React-based web interface for cluster management
+   - Real-time node status visualization
+   - Interactive deployment management
+   - Modern, responsive design with dark theme
 
 ### Communication Flow
 
 ```
-Client → Control Plane → Message Queue → Inference Engine → Model Registry
-                ↓                              ↓
-            Response                        Results
+┌─────────┐     Registration      ┌──────────────┐
+│  Agent  │ ──────────────────────>│ Control Plane│
+│  (Node) │ <──────────────────────│   (FastAPI)  │
+└─────────┘     Heartbeats         └──────────────┘
+     │                                      │
+     │  Deployment Commands                 │
+     └──────────────────────────────────────┘
+                                            ↑
+                                            │  HTTP/REST
+                                        ┌───┴────┐
+                                        │   UI   │
+                                        │(React) │
+                                        └────────┘
 ```
-
-1. Client submits inference request to Control Plane
-2. Control Plane validates and queues request
-3. Inference Engine processes request asynchronously
-4. Results returned to client via Control Plane API
 
 ### Key Features
 
-- **Multi-Framework Support**: TensorFlow, PyTorch, ONNX, and more
-- **Horizontal Scaling**: Auto-scale inference engines based on load
-- **Async Processing**: Non-blocking request handling with message queues
-- **Model Versioning**: Track and manage multiple model versions
-- **RESTful API**: Simple HTTP/JSON interface for all operations
+- **Distributed Node Management**: Register and monitor multiple nodes across your infrastructure
+- **Real-time Monitoring**: Track CPU, memory, disk usage, and GPU availability
+- **Smart Placement**: Orchestrator selects optimal nodes based on resource requirements
+- **Deployment Management**: Create, track, and manage service deployments
+- **Auto-discovery**: Agents automatically detect and report system capabilities
+- **Fault Tolerant**: Automatic re-registration and status tracking
 
 ## Development Environment Setup
 
@@ -83,39 +91,85 @@ This project uses VS Code and GitHub Copilot for AI-powered development. All env
 
 ```
 MIaaS/
-├── services/           # Microservices
-│   ├── control-plane/  # Request orchestration service
-│   ├── inference-engine/ # Model execution service
-│   └── model-registry/ # Model storage service
-├── ops/                # Operations & deployment
-│   └── docker-compose.yml # Container orchestration
+├── control-plane/      # FastAPI orchestration backend
+│   ├── app/            # Application code
+│   │   ├── api/v1/     # API endpoints (nodes, deployments)
+│   │   ├── db/         # Database models and sessions
+│   │   └── orchestrator/ # Placement engine
+│   ├── tests/          # Test suite
+│   ├── Dockerfile      # Container build
+│   └── requirements.txt
+├── agent/              # Node agent daemon
+│   ├── agent.py        # Main agent code
+│   ├── Dockerfile
+│   └── requirements.txt
+├── ui/                 # React web interface
+│   ├── src/
+│   │   ├── components/ # Node cards, lists
+│   │   └── App.jsx     # Main application
+│   ├── Dockerfile
+│   └── package.json
 ├── docs/               # Documentation
+│   ├── onboarding.md   # Developer onboarding
 │   ├── protocol.md     # API specifications
-│   └── onboarding.md   # Developer onboarding guide
-├── setup.ps1           # Development environment setup
+│   └── index.md        # Documentation portal
+├── docker-compose.yml  # Multi-service orchestration
+├── QUICKSTART.md       # Quick start guide
+├── MVP_SUMMARY.md      # Implementation summary
 └── README.md           # This file
 ```
 
 ## Quick Start
 
-### Running the Control Plane
-
-Start the control plane service using Docker Compose:
+The fastest way to get MIaaS running is with Docker Compose:
 
 ```bash
-cd ops
-docker-compose up -d
+# Start control plane and agent
+docker-compose up --build
+
+# In another terminal, verify it's working
+curl http://localhost:8080/api/v1/nodes
 ```
 
-Verify the service is running:
+This will:
+- Start the control plane on port 8080
+- Start an agent that automatically registers
+- Begin sending heartbeats every 30 seconds
+
+### View API Documentation
+
+Open your browser to see interactive API docs:
+- **Swagger UI**: http://localhost:8080/docs
+- **ReDoc**: http://localhost:8080/redoc
+
+### Quick API Examples
+
 ```bash
+# Check health
 curl http://localhost:8080/health
+
+# List registered nodes
+curl http://localhost:8080/api/v1/nodes
+
+# Get specific node details
+curl http://localhost:8080/api/v1/nodes/{node_id}
+
+# List deployments
+curl http://localhost:8080/api/v1/deployments
 ```
+
+### Running Locally (Without Docker)
+
+See [QUICKSTART.md](QUICKSTART.md) for detailed instructions on running components individually.
 
 ### Documentation
 
-- **[Protocol Specification](docs/protocol.md)**: API endpoints and communication protocols
-- **[Onboarding Guide](docs/onboarding.md)**: Comprehensive developer setup and workflow
+- **[Quick Start Guide](QUICKSTART.md)**: Get up and running in minutes
+- **[Onboarding Guide](docs/onboarding.md)**: Comprehensive developer setup
+- **[Control Plane README](control-plane/README.md)**: API endpoints and architecture
+- **[Agent README](agent/README.md)**: Agent configuration and capabilities
+- **[UI README](ui/README.md)**: React UI development
+- **[Architecture Document](MIaaS.md)**: Full system design and roadmap
 - **[CI/CD Documentation](.github/workflows/CI_DOCUMENTATION.md)**: Continuous Integration pipeline details
 
 ## CI/CD Pipeline
