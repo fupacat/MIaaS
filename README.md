@@ -170,12 +170,25 @@ See [QUICKSTART.md](QUICKSTART.md) for detailed instructions on running componen
 - **[Agent README](agent/README.md)**: Agent configuration and capabilities
 - **[UI README](ui/README.md)**: React UI development
 - **[Architecture Document](MIaaS.md)**: Full system design and roadmap
+- **[CI/CD Documentation](.github/workflows/CI_DOCUMENTATION.md)**: Continuous Integration pipeline details
+
+## CI/CD Pipeline
+
+The project uses automated CI/CD workflows that run on every push and pull request:
+
+- **Control Plane Tests**: Python/FastAPI backend testing
+- **Agent Tests**: Node agent validation and testing  
+- **UI Build & Lint**: React frontend linting and building
+- **Integration Tests**: Cross-component testing
+- **Docker Builds**: Container image validation
+
+For detailed information about the CI pipeline, triggers, error handling, and troubleshooting, see the [CI/CD Documentation](.github/workflows/CI_DOCUMENTATION.md).
 
 ## Contributing
 
 1. Create a feature branch from `master`
 2. Make your changes following the project conventions
-3. Test locally using Docker Compose
+3. Ensure CI passes locally before pushing (see [CI/CD Documentation](.github/workflows/CI_DOCUMENTATION.md#local-testing))
 4. Submit a pull request with clear description
 
 For detailed contribution guidelines, see [docs/onboarding.md](docs/onboarding.md).
