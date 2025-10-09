@@ -140,10 +140,11 @@ Run tests with coverage:
 pytest --cov=app tests/
 ```
 
-All 27 tests should pass:
+All 31 tests should pass:
 - 11 API endpoint tests
 - 8 deployment tests
 - 8 model validation tests
+- 4 seed data tests
 
 ## Project Structure
 
@@ -168,6 +169,25 @@ control-plane/
 ## Database
 
 The control plane uses SQLite by default (`control_plane.db`). The database is created automatically on first run.
+
+### Seeding Test Data
+
+To quickly populate the database with test nodes:
+
+**Option 1: Shell script (requires running server)**
+```bash
+./seed_data.sh
+```
+
+**Option 2: Python script (direct database access)**
+```bash
+python seed_data.py
+python seed_data.py --clear  # Clear existing data first
+```
+
+This will create 3 test nodes with different capabilities including GPU support.
+
+### Reset Database
 
 To reset the database:
 ```bash

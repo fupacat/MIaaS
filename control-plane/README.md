@@ -263,6 +263,25 @@ Then install PostgreSQL driver:
 pip install psycopg2-binary
 ```
 
+### Database Migration Strategy
+
+For detailed information about database migrations, schema versioning, and transitioning from SQLite to PostgreSQL, see [Database Migration Strategy](docs/database_migrations.md).
+
+### Seeding Test Data
+
+Two options are available for seeding test data:
+
+**Option 1: Shell script (requires running server):**
+```bash
+./seed_data.sh
+```
+
+**Option 2: Python script (direct database access):**
+```bash
+python seed_data.py
+python seed_data.py --clear  # Clear existing data first
+```
+
 ## Orchestrator
 
 The placement engine (`app/orchestrator/placement.py`) implements intelligent node selection based on:
@@ -321,7 +340,7 @@ CORS_ORIGINS=*                              # Allowed CORS origins
 - [ ] Implement template rendering with Jinja2
 - [ ] Add WebSocket support for real-time logs
 - [ ] Integrate Prometheus metrics
-- [ ] Add database migrations (Alembic)
+- [ ] Add database migrations with Alembic (strategy documented in [docs/database_migrations.md](docs/database_migrations.md))
 - [ ] Implement RBAC for multi-user support
 
 ## See Also
