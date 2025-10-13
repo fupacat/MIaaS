@@ -1,5 +1,5 @@
 # Root requirements file
 # See control-plane/requirements.txt for control-plane specific dependencies
-Flask==3.0.0
+Flask==3.1.2
 pytest==7.4.3
 pytest-flask==1.3.0
