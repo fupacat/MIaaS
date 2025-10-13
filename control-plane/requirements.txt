@@ -4,5 +4,5 @@ pydantic==2.5.0
 sqlalchemy==2.0.23
 pytest==7.4.3
 httpx==0.25.2
-pyjwt==2.8.0
+pyjwt==2.10.1
 python-multipart==0.0.6
